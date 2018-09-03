@@ -1,0 +1,39 @@
+#!/usr/bin/make -f
+
+MAKEFLAGS += -Rr
+SHELL := $(shell which bash)
+
+.DEFAULT_GOAL := all
+
+store := /var/local/duplicity/store
+
+sets  = proot -w $(store) find -mindepth 2 -maxdepth 2 -type d
+sets += | proot -w $(store) xargs -r du -sBG | sort -n$(REV) | sed -e 's;G	./; ;'
+
+max_small  := 9
+max_medium := 99
+
+all    = $(sets)
+small  = $(sets) | awk '$$1 <= $(max_small)'
+medium = $(sets) | awk '$$1 > $(max_small) && $$1 <= $(max_medium)'
+big    = $(sets) | awk '$$1 > $(max_medium)'
+
+cmds := all small medium big
+$(cmds):; @$($@) $(opts)
+.PHONY: $(cmds)
+
+list.cmd := cut -d' ' -f2
+sum.cmd  := awk '{ s += $$1; print } END { print s }'
+opts      = $(if $(SUM), | $(sum.cmd),$(if $(LIST), | $(list.cmd)))
+
+LIST :=
+list := LIST := T
+
+SUM :=
+sum := SUM := T
+
+REV := r
+rev := REV :=
+
+vartar := list sum rev
+$(vartar):; @: $(eval $($@))

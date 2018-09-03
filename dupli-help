@@ -1,0 +1,19 @@
+#!/usr/bin/make -f
+
+MAKEFLAGS += -Rrs
+SHELL != which bash
+
+self    := $(lastword $(MAKEFILE_LIST))
+$(self) := $(basename $(self))
+dupli   := $(notdir $(self))
+$(self): help;
+
+define help
+echo dupli help
+echo dupli sets
+echo dupli sync
+echo dupli trim
+endef
+
+help:; @$($@)
+.PHONY: help

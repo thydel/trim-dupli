@@ -1,0 +1,32 @@
+#!/usr/bin/make -f
+
+MAKEFLAGS += -Rr
+
+include /etc/local/duply-local.mk
+
+BWP ?= 12
+BWL != echo 2^$(BWP) | bc
+
+ifdef NEVER
+BWP ?= 11
+BWL != echo 2^$(BWP) + 2^10 | bc
+endif
+
+store := /var/local/duplicity/store
+
+key        := /root/.ssh/duplicity-rsync
+rsync.ssh  := -e 'ssh -i $(key)'
+rsync.bwl  := --bwlimit=$(BWL)k
+rsync.args  = -avRP$(DRY) --no-i-r --delay-updates
+rsync       = rsync "$(rsync.ssh)" $(rsync.bwl) $(rsync.args) $(store)/./{} $(secondary.backup)::duplicity
+
+main:; @xargs -i echo $(rsync) | $(RUN)
+
+RUN        := cat
+run := RUN := dash
+
+DRY        :=
+dry := DRY := n
+
+vartar := run dry
+$(vartar):; @: $(eval $($@))

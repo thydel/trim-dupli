@@ -1,0 +1,44 @@
+#!/usr/bin/make -f
+
+MAKEFLAGS += -Rr
+SHELL := $(shell which bash)
+
+.DEFAULT_GOAL := main
+
+weeks    ?= 12
+
+store    := /var/local/duplicity/store
+set      ?= node/volume
+
+path     := $(store)/$(set)
+pattern  := duplicity-full.*.vol1.difftar.gpg
+lastkeep := "$$(date +%F -d '$(weeks) weeks ago')"
+
+date := find $(path) -type f -name $(pattern) ! -newermt $(lastkeep)
+date += | xargs -r ls -t | head -1 | xargs -ri stat -c %Y {}
+date += | xargs -ri echo expr {} - 1 | dash
+
+find := find $(path) -type f ! -newermt '@{}'
+
+files := $(date) | xargs -ri $(find)
+
+Short := sed -e 's;$(store)/;;'
+
+info := echo $(path) $(lastkeep) is $(weeks) weeks ago
+size := $(files) | xargs -r du -scBG | cut -f1 | tail -1 | tr '\n' '\t' | sed -e 's;G	; ;' | xargs -ri echo {}$(set)
+oldsets = $(files) | $(Short) | cut -d/ -f 1-2 | uniq
+list  = $(files) | xargs -r ls -lt $(SHORT)
+main  = $(files) | xargs -r echo rm | $(RUN)
+
+cmds := info size list main oldsets
+$(cmds):; @$($@)
+.PHONY: $(cmds)
+
+RUN         := cat
+run  := RUN := dash
+
+SHORT :=
+short := SHORT := | $(Short)
+
+vartar := run short
+$(vartar):; @: $(eval $($@))
