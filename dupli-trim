@@ -1,0 +1,46 @@
+#!/usr/bin/make -f
+
+MAKEFLAGS += -Rr
+SHELL := $(shell which bash)
+
+.DEFAULT_GOAL := trim
+
+weeks    ?= 12
+
+store    := /var/local/duplicity/store
+set      ?= node/volume
+
+path     := $(store)/$(set)
+pattern  := duplicity-full.*.vol1.difftar.gpg
+lastkeep := "$$(date +%F -d '$(weeks) weeks ago')"
+
+date := find $(path) -type f -name $(pattern) ! -newermt $(lastkeep)
+date += | xargs -r ls -t | head -1 | xargs -ri stat -c %Y {}
+date += | xargs -ri echo expr {} - 1 | dash
+
+find := find $(path) -type f ! -newermt '@{}'
+
+files := $(date) | xargs -ri $(find)
+
+info := echo $(path) $(lastkeep) is $(weeks) weeks ago
+size := $(files) | xargs -r du -scBG | cut -f1 | tail -1 | tr '\n' '\t' | xargs -ri echo {}$(set)
+list := $(files) | xargs -r ls -lt
+trim  = $(files) | xargs -r echo rm | $(RUN)
+
+sets :=   proot -w $(store) find -mindepth 2 -maxdepth 2 -type d
+sets += | proot -w $(store) xargs -r du -sBG | sort -nr | head | cut -d/ -f2,3
+
+cmds := info size list trim sets
+$(cmds):; @$($@)
+.PHONY: $(cmds)
+
+RUN         := cat
+run  := RUN := dash
+
+vartar := run
+$(vartar):; @: $(eval $($@))
+
+
+help:
+	@echo make sets | xargs -i make set={} size weeks=24
+	@echo make sets | xargs -i make set={} size weeks=24 | cut -f2 | xargs -i echo make set={} run trim

@@ -1,0 +1,20 @@
+#!/usr/bin/make -f
+
+MAKEFLAGS += -Rrs
+SHELL != which bash
+
+self    := $(lastword $(MAKEFILE_LIST))
+$(self) := $(basename $(self))
+dupli   := $(notdir $(self))
+$(self):;
+
+cmds := help sets sync trim
+
+. := $(or $(MAKECMDGOALS), $(error $(dupli) help))
+cmd := $(word 1, $(MAKECMDGOALS))
+. := $(or $(filter $(cmd), $(cmds)), $(error $(dupli): $(cmd) is not a command. See $(dupli) help))
+args := $(wordlist 2, 99, $(MAKECMDGOALS))
+
+$(cmds):; @$(dupli)-$@ $(args)
+.DEFAULT:; @:
+.PHONY: $(MAKECMDGOALS)
