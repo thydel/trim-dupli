@@ -1,0 +1,18 @@
+#!/usr/bin/make -f
+
+MAKEFLAGS += -Rr
+SHELL     != which bash
+
+include dupli-common.mk
+
+local := /usr/local
+bin   := $(local)/bin
+etc   := $(local)/etc
+
+bin.files := $(cmds:%=$(bin)/dupli-%)
+
+#$(bin)/dupli $(files): $(bin)/% : %; install $< $@
+
+$(bin)/%: %; install $< $@
+
+main: $(bin.files);

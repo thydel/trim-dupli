@@ -12,13 +12,16 @@ store := /var/local/duplicity/store
 key        := /root/.ssh/duplicity-rsync
 rsync.ssh  := -e 'ssh -i $(key)'
 rsync.bwl  := --bwlimit=$(BWL)k
-rsync.args := -avP --no-i-r --delay-updates
-rsync      := rsync "$(rsync.ssh)" $(rsync.bwl) $(rsync.args) $(store) $(secondary.backup)::duplicity
+rsync.args  = -avRP$(DRY) --no-i-r --delay-updates
+rsync       = rsync "$(rsync.ssh)" $(rsync.bwl) $(rsync.args) $(store)/./{} $(secondary.backup)::duplicity
 
-main:; xargs -i echo $(rsync) | $(RUN)
+main:; @xargs -i echo $(rsync) | $(RUN)
 
-RUN         := cat
-run  := RUN := dash
+RUN        := cat
+run := RUN := dash
 
-vartar := run
+DRY        :=
+dry := DRY := n
+
+vartar := run dry
 $(vartar):; @: $(eval $($@))

@@ -8,7 +8,7 @@ $(self) := $(basename $(self))
 dupli   := $(notdir $(self))
 $(self):;
 
-cmds := help sets sync trim
+include dupli-common.mk
 
 . := $(or $(MAKECMDGOALS), $(error $(dupli) help))
 cmd := $(word 1, $(MAKECMDGOALS))
