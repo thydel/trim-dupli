@@ -4,8 +4,26 @@ MAKEFLAGS += -Rr
 SHELL != which bash
 .DEFAULT_GOAL := help
 
+self    := $(lastword $(MAKEFILE_LIST))
+$(self) := $(basename $(self))
+dupli   := $(notdir $(self))
+$(self):;
+
 include /etc/local/duply-local.mk
-$(if $(secondary.backup),,$(error secondary.backup undefined))
+$(if $(secondary.backup),,$(error $(dupli): secondary.backup undefined))
+
+opts := time dry run
+cmds := help main
+
+error.1.test := $(filter-out $(opts) $(cmds), $(MAKECMDGOALS))
+error.1.msg   = $(dupli): $(error.1.test) is nor an option nor a command. See $(dupli) help
+errors += 1
+
+error.2.test := $(if $(filter $(opts), $(MAKECMDGOALS)),$(if $(filter $(cmds), $(MAKECMDGOALS)),,T))
+error.2.msg   = $(dupli): option whithout command. See $(dupli) help
+errors += 2
+
+$(foreach _,$(errors),$(if $(error.$_.test),$(error $(error.$_.msg))))
 
 BWP ?= 12
 BWL != echo 2^$(BWP) | bc
@@ -20,17 +38,32 @@ rsync       = $(if $(TIME),time) rsync "$(rsync.ssh)" $(rsync.bwl) $(rsync.args)
 rsync      += $(store)/./{} $(secondary.backup)::duplicity
 main        = xargs -i echo 'echo {}; echo; $(rsync); echo' $(RUN)
 
+$(cmds):; @$($@) $(opts.cmd)
+.PHONY: $(cmds)
+
 time := TIME := T
 dry  := DRY  := n
 run   = RUN  := | $(if $(TIME),time) dash |& cat
 
-vartar := time dry run
-$(vartar):; @: $(eval $($@))
+$(opts):; @: $(eval $($@))
+
+space :=
+space +=
+
+opts.help := $(foreach _,$(opts),[$_])
+cmds.help := [$(subst $(space),|,$(cmds))]
 
 define help
-echo dupli sync [time] [dry] [run] main
+echo
+echo '$(dupli) $(opts.help) $(cmds.help)'
+echo
+echo 'read a list of volumes (<node>/<vol>) on stdin and generate rsync cmd lines'
+echo 'use cmd "main" to allow options'
+echo
+echo 'default to show generated lines'
+echo
+echo 'use option "run" to pipe exec generated lines'
+echo 'use option "dry" to get dry-run rsync'
+echo 'use option "time" to insert time wrapper'
+echo
 endef
-
-main help:; @$($@)
-
-.PHONY: help $(vartar)

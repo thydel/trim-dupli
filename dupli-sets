@@ -1,7 +1,25 @@
 #!/usr/bin/make -f
 
 MAKEFLAGS += -Rr
-SHELL := $(shell which bash)
+SHELL != which bash
+
+self    := $(lastword $(MAKEFILE_LIST))
+$(self) := $(basename $(self))
+dupli   := $(notdir $(self))
+$(self):;
+
+opts := list sum rev
+cmds := help all small medium big
+
+error.1.test := $(filter-out $(opts) $(cmds), $(MAKECMDGOALS))
+error.1.msg   = $(dupli): $(error.1.test) is nor an option nor a command. See $(dupli) help
+errors += 1
+
+error.2.test := $(if $(filter $(opts), $(MAKECMDGOALS)),$(if $(filter $(cmds), $(MAKECMDGOALS)),,T))
+error.2.msg   = $(dupli): option whithout command. See $(dupli) help
+errors += 2
+
+$(foreach _,$(errors),$(if $(error.$_.test),$(error $(error.$_.msg))))
 
 .DEFAULT_GOAL := all
 
@@ -18,22 +36,48 @@ small  = $(sets) | awk '$$1 <= $(max_small)'
 medium = $(sets) | awk '$$1 > $(max_small) && $$1 <= $(max_medium)'
 big    = $(sets) | awk '$$1 > $(max_medium)'
 
-cmds := all small medium big
-$(cmds):; @$($@) $(opts)
+$(cmds):; @$($@) $(opts.cmd)
 .PHONY: $(cmds)
 
 list.cmd := cut -d' ' -f2
 sum.cmd  := awk '{ s += $$1; print } END { print s }'
-opts      = $(if $(SUM), | $(sum.cmd),$(if $(LIST), | $(list.cmd)))
+opts.cmd  = $(if $(SUM), | $(sum.cmd),$(if $(LIST), | $(list.cmd)))
 
-LIST :=
 list := LIST := T
+sum  := SUM := T
+REV  := r
+rev  := REV :=
 
-SUM :=
-sum := SUM := T
+$(opts):; @: $(eval $($@))
 
-REV := r
-rev := REV :=
+space :=
+space +=
 
-vartar := list sum rev
-$(vartar):; @: $(eval $($@))
+opts.help := $(foreach _,$(opts),[$_])
+cmds.help := [$(subst $(space),|,$(cmds))]
+
+define help
+echo
+echo '$(dupli) $(opts.help) $(cmds.help)'
+echo
+echo 'list sets of volumes (<node>/<vol>) by size segment'
+echo 'use cmd'
+echo -e '\t"small"  to list vol <= $(max_small)G'
+echo -e '\t"medium" to list vol > $(max_small)G && <= $(max_medium)G'
+echo -e '\t"big"    to list vol > $(max_medium)G'
+echo -e '\t"all"    to list all vol'
+echo
+echo 'default to list "all" volumes'
+echo 'default to list reverse sorted by size'
+echo 'default to show size and volume'
+echo
+echo 'use option "list" to show volume only (to pipe to other dupli module)'
+echo 'use option "rev" to reverse sort (lower first)'
+echo 'use option "sum" to sum all volume size'
+echo
+echo 'options must precede cmd'
+echo 'when using options cmd is required'
+echo
+endef
+
+.PHONY: $(cmds) $(opts)

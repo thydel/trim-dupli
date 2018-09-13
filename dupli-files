@@ -4,10 +4,33 @@ MAKEFLAGS += -Rr
 SHELL != which bash
 .DEFAULT_GOAL := help
 
-weeks    ?= 12
+self    := $(lastword $(MAKEFILE_LIST))
+$(self) := $(basename $(self))
+dupli   := $(notdir $(self))
+$(self):;
+
+cmds  := help raw size list sets
+opts  := short newer info
+
+weeks ?= 12
+
+see := See $(dupli) help
+
+error.1.tst := $(filter-out $(opts) $(cmds), $(MAKECMDGOALS))
+error.1.msg := $(dupli): $(error.1.test) is neither an option nor a command. $(see)
+errors += 1
+
+error.2.tst := $(if $(filter $(opts), $(MAKECMDGOALS)),$(if $(filter $(cmds), $(MAKECMDGOALS)),,T))
+error.2.msg := $(dupli): option whithout command. $(see)
+errors += 2
+
+error.3.tst := $(if $(filter $(filter-out help, $(cmds)), $(MAKECMDGOALS)),$(if $(set),,T))
+error.3.msg := $(dupli): argument "set" undefined. $(see)
+errors += 3
+
+$(foreach _,$(errors),$(if $(error.$_.tst),$(error $(error.$_.msg))))
 
 store    := /var/local/duplicity/store
-set      ?= node/volume
 
 path     := $(store)/$(set)
 pattern  := duplicity-full.*.vol1.difftar.gpg
@@ -28,7 +51,6 @@ size = $(files) | xargs -r du -scBG | cut -f1 | tail -1 | tr '\n' '\t' | sed -e 
 sets = $(files) | $(Short) | cut -d/ -f 1-2 | uniq
 list = $(files) | xargs -r ls -lt $(SHORT)
 
-cmds := help raw size list sets
 $(cmds):; @$(INFO)$($@)
 
 short := SHORT := | $(Short)
@@ -36,7 +58,6 @@ CMP   := !
 newer := CMP :=
 info  := INFO := $(Info);
 
-opts := short newer info
 $(opts):; @: $(eval $($@))
 
 space :=
@@ -46,9 +67,10 @@ opts.help := $(foreach _,$(opts),[$_])
 cmds.help := [$(subst $(space),|,$(cmds))]
 
 define help
-echo 'dupli files $(opts.help) $(cmds.help) set=<node>/<vol> [weeks=<n(12)>]'
 echo
-echo 'select files older (default) or "newer" (option) than the last full backup make $$n "weeks" ago (default 12)'
+echo '$(dupli) $(opts.help) $(cmds.help) set=<node>/<vol> [weeks=<n(12)>]'
+echo
+echo 'select files older (default) or "newer" (option) than the last full backup make <n> "weeks" ago (default 12)'
 echo
 echo 'use cmd "raw" for bare full path list'
 echo 'use cmd "list" for sorted "ls(1) -lt"'
@@ -57,6 +79,7 @@ echo 'use cmd "size" to get the total size of selected files'
 echo 'use cmd "sets" to reduce output to <node>/<vol> when selected file set is not empty'
 echo
 echo 'use option info to show <node>/<vol> and date for "weeks"'
+echo
 endef
 
 .PHONY: $(cmds) $(opts)
