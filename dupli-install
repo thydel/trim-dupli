@@ -17,3 +17,4 @@ files := $(bin.files) $(etc.files)
 $(etc)/% $(bin)/%: %; install $< $@
 
 main: $(files);
+.PHONY: main

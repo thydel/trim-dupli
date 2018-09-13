@@ -3,18 +3,13 @@
 MAKEFLAGS += -Rrs
 SHELL != which bash
 
-self    := $(lastword $(MAKEFILE_LIST))
-$(self) := $(basename $(self))
-dupli   := $(notdir $(self))
-$(self):;
-
 include /usr/local/etc/dupli-common.mk
 
-. := $(or $(MAKECMDGOALS), $(error $(dupli) help))
+$(if $(MAKECMDGOALS),,$(error dupli help))
 cmd := $(word 1, $(MAKECMDGOALS))
-. := $(or $(filter $(cmd), $(cmds)), $(error $(dupli): $(cmd) is not a command. See $(dupli) help))
+$(if $(filter $(cmd), $(cmds)),,$(error dupli: $(cmd) is not a command. See dupli help))
 args := $(wordlist 2, 99, $(MAKECMDGOALS))
 
-$(cmds):; @$(dupli)-$@ $(args)
+$(cmds):; dupli-$@ $(args)
 .DEFAULT:; @:
 .PHONY: $(MAKECMDGOALS)

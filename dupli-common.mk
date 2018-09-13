@@ -1,2 +1,2 @@
-cmds := help sets sync trim install
+cmds := help sets files sync
 etcs := common

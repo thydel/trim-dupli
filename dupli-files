@@ -1,0 +1,62 @@
+#!/usr/bin/make -f
+
+MAKEFLAGS += -Rr
+SHELL != which bash
+.DEFAULT_GOAL := help
+
+weeks    ?= 12
+
+store    := /var/local/duplicity/store
+set      ?= node/volume
+
+path     := $(store)/$(set)
+pattern  := duplicity-full.*.vol1.difftar.gpg
+lastkeep != date +%F -d '$(weeks) weeks ago'
+
+date  = find $(path) -type f -name $(pattern) $(CMP) -newermt $(lastkeep)
+date += | xargs -r ls -t | head -1 | xargs -ri stat -c %Y {}
+date += | xargs -ri echo expr {} - 1 | dash
+
+find  = xargs -ri find $(path) -type f $(CMP) -newermt '@{}'
+files = $(date) | $(find)
+
+Short := sed -e 's;$(store)/;;'
+Info  := echo $(path) $(lastkeep) is $(weeks) weeks ago
+
+raw  = $(files)
+size = $(files) | xargs -r du -scBG | cut -f1 | tail -1 | tr '\n' '\t' | sed -e 's;G	; ;' | xargs -ri echo {}$(set)
+sets = $(files) | $(Short) | cut -d/ -f 1-2 | uniq
+list = $(files) | xargs -r ls -lt $(SHORT)
+
+cmds := help raw size list sets
+$(cmds):; @$(INFO)$($@)
+
+short := SHORT := | $(Short)
+CMP   := !
+newer := CMP :=
+info  := INFO := $(Info);
+
+opts := short newer info
+$(opts):; @: $(eval $($@))
+
+space :=
+space +=
+
+opts.help := $(foreach _,$(opts),[$_])
+cmds.help := [$(subst $(space),|,$(cmds))]
+
+define help
+echo 'dupli files $(opts.help) $(cmds.help) set=<node>/<vol> [weeks=<n(12)>]'
+echo
+echo 'select files older (default) or "newer" (option) than the last full backup make $$n "weeks" ago (default 12)'
+echo
+echo 'use cmd "raw" for bare full path list'
+echo 'use cmd "list" for sorted "ls(1) -lt"'
+echo '         option "short" suppress store prefix'
+echo 'use cmd "size" to get the total size of selected files'
+echo 'use cmd "sets" to reduce output to <node>/<vol> when selected file set is not empty'
+echo
+echo 'use option info to show <node>/<vol> and date for "weeks"'
+endef
+
+.PHONY: $(cmds) $(opts)

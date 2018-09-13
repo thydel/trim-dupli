@@ -1,32 +1,36 @@
 #!/usr/bin/make -f
 
 MAKEFLAGS += -Rr
+SHELL != which bash
+.DEFAULT_GOAL := help
 
 include /etc/local/duply-local.mk
+$(if $(secondary.backup),,$(error secondary.backup undefined))
 
 BWP ?= 12
 BWL != echo 2^$(BWP) | bc
 
-ifdef NEVER
-BWP ?= 11
-BWL != echo 2^$(BWP) + 2^10 | bc
-endif
-
-store := /var/local/duplicity/store
-
+store      := /var/local/duplicity/store
 key        := /root/.ssh/duplicity-rsync
+
 rsync.ssh  := -e 'ssh -i $(key)'
 rsync.bwl  := --bwlimit=$(BWL)k
 rsync.args  = -avRP$(DRY) --no-i-r --delay-updates
-rsync       = rsync "$(rsync.ssh)" $(rsync.bwl) $(rsync.args) $(store)/./{} $(secondary.backup)::duplicity
+rsync       = $(if $(TIME),time) rsync "$(rsync.ssh)" $(rsync.bwl) $(rsync.args)
+rsync      += $(store)/./{} $(secondary.backup)::duplicity
+main        = xargs -i echo 'echo {}; echo; $(rsync); echo' $(RUN)
 
-main:; @xargs -i echo $(rsync) | $(RUN)
+time := TIME := T
+dry  := DRY  := n
+run   = RUN  := | $(if $(TIME),time) dash |& cat
 
-RUN        := cat
-run := RUN := dash
-
-DRY        :=
-dry := DRY := n
-
-vartar := run dry
+vartar := time dry run
 $(vartar):; @: $(eval $($@))
+
+define help
+echo dupli sync [time] [dry] [run] main
+endef
+
+main help:; @$($@)
+
+.PHONY: help $(vartar)
