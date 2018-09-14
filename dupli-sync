@@ -2,7 +2,7 @@
 
 MAKEFLAGS += -Rr
 SHELL != which bash
-.DEFAULT_GOAL := help
+.DEFAULT_GOAL := main
 
 self    := $(lastword $(MAKEFILE_LIST))
 $(self) := $(basename $(self))
@@ -15,15 +15,17 @@ $(if $(secondary.backup),,$(error $(dupli): secondary.backup undefined))
 opts := time dry run
 cmds := help main
 
-error.1.test := $(filter-out $(opts) $(cmds), $(MAKECMDGOALS))
-error.1.msg   = $(dupli): $(error.1.test) is nor an option nor a command. See $(dupli) help
+see := See $(dupli) help
+
+error.1.tst := $(filter-out $(opts) $(cmds), $(MAKECMDGOALS))
+error.1.msg := $(dupli): $(error.1.tst) is neither an option nor a command. $(see)
 errors += 1
 
-error.2.test := $(if $(filter $(opts), $(MAKECMDGOALS)),$(if $(filter $(cmds), $(MAKECMDGOALS)),,T))
-error.2.msg   = $(dupli): option whithout command. See $(dupli) help
+error.2.tst := $(if $(filter $(opts), $(MAKECMDGOALS)),$(if $(filter $(cmds), $(MAKECMDGOALS)),,T))
+error.2.msg := $(dupli): option whithout command. $(see)
 errors += 2
 
-$(foreach _,$(errors),$(if $(error.$_.test),$(error $(error.$_.msg))))
+$(foreach _,$(errors),$(if $(error.$_.tst),$(error $(error.$_.msg))))
 
 BWP ?= 12
 BWL != echo 2^$(BWP) | bc
