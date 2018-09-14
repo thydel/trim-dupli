@@ -9,15 +9,15 @@ $(self) := $(basename $(self))
 dupli   := $(notdir $(self))
 $(self):;
 
-cmds  := help raw size list sets
-opts  := short newer info
+cmds  := help raw size list sets fulls
+opts  := short newer info verb debug
 
 weeks ?= 12
 
 see := See $(dupli) help
 
 error.1.tst := $(filter-out $(opts) $(cmds), $(MAKECMDGOALS))
-error.1.msg := $(dupli): $(error.1.test) is neither an option nor a command. $(see)
+error.1.msg := $(dupli): $(error.1.tst) is neither an option nor a command. $(see)
 errors += 1
 
 error.2.tst := $(if $(filter $(opts), $(MAKECMDGOALS)),$(if $(filter $(cmds), $(MAKECMDGOALS)),,T))
@@ -34,11 +34,15 @@ store    := /var/local/duplicity/store
 
 path     := $(store)/$(set)
 pattern  := duplicity-full.*.vol1.difftar.gpg
-lastkeep != date +%F -d '$(weeks) weeks ago'
+lastkeep != date +%F -d '$(or $(days),$(weeks)) $(if $(day),day,weeks) ago'
 
-date  = find $(path) -type f -name $(pattern) $(CMP) -newermt $(lastkeep)
-date += | xargs -r ls -t | head -1 | xargs -ri stat -c %Y {}
-date += | xargs -ri echo expr {} - 1 | dash
+fulls = find $(path) -type f -name $(pattern) $(CMP) -newermt $(lastkeep)
+
+trace = $(and $(DEBUG), | tee -a ~/tmp/$(dupli)-date)
+
+date  = $(fulls) $(trace)
+date += | xargs -r ls -t | head -1 | xargs -ri stat -c %Y {} $(trace)
+date += | xargs -ri echo expr {} $(if $(CMP),+,-) 1 | dash $(trace)
 
 find  = xargs -ri find $(path) -type f $(CMP) -newermt '@{}'
 files = $(date) | $(find)
@@ -57,6 +61,8 @@ short := SHORT := | $(Short)
 CMP   := !
 newer := CMP :=
 info  := INFO := $(Info);
+verb  := SHELL := $(SHELL) -v
+debug := DEBUG := T
 
 $(opts):; @: $(eval $($@))
 
@@ -64,7 +70,7 @@ space :=
 space +=
 
 opts.help := $(foreach _,$(opts),[$_])
-cmds.help := [$(subst $(space),|,$(cmds))]
+cmds.help := $(subst $(space),|,$(cmds))
 
 define help
 echo
@@ -77,6 +83,7 @@ echo 'use cmd "list" for sorted "ls(1) -lt"'
 echo '         option "short" suppress store prefix'
 echo 'use cmd "size" to get the total size of selected files'
 echo 'use cmd "sets" to reduce output to <node>/<vol> when selected file set is not empty'
+echo 'use cmd "full" to see all full starting points'
 echo
 echo 'use option info to show <node>/<vol> and date for "weeks"'
 echo

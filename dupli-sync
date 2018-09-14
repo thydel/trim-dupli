@@ -62,8 +62,10 @@ echo 'use cmd "main" to allow options'
 echo
 echo 'default to show generated lines'
 echo
-echo 'use option "run" to pipe exec generated lines'
 echo 'use option "dry" to get dry-run rsync'
 echo 'use option "time" to insert time wrapper'
+echo 'use option "run" to pipe exec generated lines'
+echo
+echo 'option time must precede option run'
 echo
 endef
