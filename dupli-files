@@ -38,7 +38,7 @@ lastkeep != date +%F -d '$(or $(days),$(weeks)) $(if $(day),day,weeks) ago'
 
 fulls = find $(path) -type f -name $(pattern) $(CMP) -newermt $(lastkeep)
 
-trace = $(and $(DEBUG), | tee -a ~/tmp/$(dupli)-date)
+trace = $(and $(DEBUG), | tee -a ~/tmp/$(dupli)-trace)
 
 date  = $(fulls) $(trace)
 date += | xargs -r ls -t | head -1 | xargs -ri stat -c %Y {} $(trace)
